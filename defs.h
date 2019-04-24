@@ -121,7 +121,9 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 struct thread*  mythread(void); //2.1 added
-
+void            kthread_exit(void); //2.2 added
+int             kthread_join(int); //2.2 added
+int kthread_create(void (*)(void), void*); // 2.2 added
 
 // swtch.S
 void            swtch(struct context**, struct context*);

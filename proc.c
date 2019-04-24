@@ -15,6 +15,7 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+int nexttid = 1;
 extern void forkret(void);
 extern void trapret(void);
 
@@ -157,7 +158,7 @@ alloctread(struct proc *p)
 
     found:
   t->state = TEMBRYO;
-  t->tid = idx;
+  t->tid = nexttid++;
   t->parent = p;
 
 //  release(&ptable.lock);

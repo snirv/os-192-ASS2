@@ -36,6 +36,26 @@ struct context {
   uint eip;
 };
 
+enum threadstate { TUNUSED, TEMBRYO ,TSLEEPING, TRUNNABLE, TRUNNING ,TZOMBIE};
+
+// Per-process state
+struct thread {
+//    uint sz;                     // Size of process memory (bytes)
+//    pde_t* pgdir;                // Page table
+    char *kstack;                // Bottom of kernel stack for this thread
+    enum threadstate state;        // Thread state
+    int tid;                     // Thread ID
+    struct proc *parent;         // Parent process
+    struct trapframe *tf;        // Trap frame for current syscall
+    struct context *context;     // swtch() here to run thread
+    void *chan;                  // If non-zero, sleeping on chan
+    int killed;                  // If non-zero, have been killed
+//    struct file *ofile[NOFILE];  // Open files
+    struct inode *cwd;           // Current directory
+    char name[16];               // Thread name (debugging)
+};
+
+
 enum procstate { PUNUSED, PEMBRYO, PUSING , PZOMBIE }; //2.1
 
 // Per-process state
@@ -64,21 +84,3 @@ struct proc {
 
 
 
-enum threadstate { TUNUSED, TEMBRYO ,TSLEEPING, TRUNNABLE, TRUNNING ,TZOMBIE};
-
-// Per-process state
-struct thread {
-//    uint sz;                     // Size of process memory (bytes)
-//    pde_t* pgdir;                // Page table
-    char *kstack;                // Bottom of kernel stack for this thread
-    enum threadstate state;        // Thread state
-    int tid;                     // Thread ID
-    struct proc *parent;         // Parent process
-    struct trapframe *tf;        // Trap frame for current syscall
-    struct context *context;     // swtch() here to run thread
-    void *chan;                  // If non-zero, sleeping on chan
-//    int killed;                  // If non-zero, have been killed
-//    struct file *ofile[NOFILE];  // Open files
-    struct inode *cwd;           // Current directory
-    char name[16];               // Thread name (debugging)
-};

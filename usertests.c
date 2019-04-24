@@ -776,13 +776,18 @@ concreate(void)
   file[0] = 'C';
   file[2] = '\0';
   for(i = 0; i < 40; i++){
+    printf(1, "concreate test loop num: %d\n", i);
+
     file[1] = '0' + i;
     unlink(file);
     pid = fork();
     if(pid && (i % 3) == 1){
       link("C0", file);
+      //printf(1, "concreate test enter father mod 3\n");
+
     } else if(pid == 0 && (i % 5) == 1){
       link("C0", file);
+//      printf(1, "concreate test enter father mod 5\n");
     } else {
       fd = open(file, O_CREATE | O_RDWR);
       if(fd < 0){
@@ -791,11 +796,16 @@ concreate(void)
       }
       close(fd);
     }
-    if(pid == 0)
+    if(pid == 0){
+      printf(1, "concreate test child pid: %d enter exit\n", pid);
       exit();
-    else
+      printf(1, "concreate test return from exit\n");
+    }
+    else {
       wait();
+    }
   }
+
 
   memset(fa, 0, sizeof(fa));
   fd = open(".", 0);
@@ -1756,9 +1766,9 @@ main(int argc, char *argv[])
   }
   close(open("usertests.ran", O_CREATE));
 
-  argptest();
-  createdelete();
-  linkunlink();
+ // argptest();
+  //createdelete();
+  //linkunlink();
   concreate();
   fourfiles();
   sharedfd();

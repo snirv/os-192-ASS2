@@ -18,10 +18,17 @@ exec(char *path, char **argv)
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
-  struct thread* curthread = mytheard();
+  struct thread* curthread = mythread();
+  struct thread* t;
 
-  //TODO need to tell all threads in the currproc to terminate after exiting from user mode
-  curthread->killed = 1;
+
+    // TODO need to tell all threads in the currproc to terminate after exiting from user mode
+    for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+        if (t != curthread) {
+            t->killed = 1;
+        }
+    }
+
 
 
   begin_op();
@@ -102,9 +109,9 @@ exec(char *path, char **argv)
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
   curproc->sz = sz;
-  curthread->tf->eip = elf.entry;  // main
+  curthread->tf->eip = elf.entry;  // main //2.1
   curthread->tf->esp = sp;
-  switchuvm(curproc);
+  switchuvm(curproc,curthread);
   freevm(oldpgdir);
   return 0;
 

@@ -87,7 +87,7 @@ static struct proc*
 allocproc(void)
 {
   struct proc *p;
-  char *sp;
+//  char *sp; 2.1
 
   acquire(&ptable.lock);
 
@@ -216,7 +216,7 @@ userinit(void)
   t->tf->eip = 0;  // beginning of initcode.S
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
-  t->cwd = namei("/");
+  p->cwd = namei("/");
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
@@ -248,7 +248,7 @@ growproc(int n)
       return -1;
   }
   curproc->sz = sz;
-  switchuvm(curproc);
+  switchuvm(curproc,mythread());
   return 0;
 }
 
@@ -292,7 +292,7 @@ fork(void)
     if(curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
 //  np->cwd = idup(curproc->cwd);
-  nt->cwd = idup(curthread->cwd);
+  np->cwd = idup(curproc->cwd);
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
@@ -303,6 +303,7 @@ fork(void)
 //  np->state = RUNNABLE;
     np->state = PUSING;
     nt->state = TRUNNABLE;
+
   release(&ptable.lock);
 
   return pid;
@@ -317,6 +318,7 @@ freethread(struct thread* t){
   t->tid = 0;
   t->parent = 0;
   t->name[0] = 0;
+
 }
 
 // Exit the current process.  Does not return.
@@ -334,6 +336,7 @@ exit(void)
   if(curproc == initproc)
     panic("init exiting");
 
+//  cprintf("state %d\n",curthread->state);
 
 
 //  begin_op();
@@ -356,13 +359,15 @@ exit(void)
     }
   }
 
-  // clean thread memory 2.1
+
+    // clean thread memory 2.1
   //  freethread(curthread);
   curthread->state = TZOMBIE;
 
-  // check if last thread to exit 2.1
-  for (t = p->ttable; t < &p->ttable[NTHREAD]; t++) {
-    if (t != curthread && t->state != TZOMBIE){
+
+    // check if last thread to exit 2.1
+  for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+    if ((t != curthread ) && ( (t->state != TZOMBIE ) && (t->state != TUNUSED) )){
       sched();
       panic("zombie exit");
     }
@@ -380,16 +385,15 @@ exit(void)
   }
 
   begin_op();
-  iput(curthread->cwd);
+  iput(curproc->cwd);
   end_op();
-  curthread->cwd = 0;
+  curproc->cwd = 0;
   curproc->killed = 1; // 2.1 added
 
 
   acquire(&ptable.lock);
   // Jump into the scheduler, never to return.
   curproc->state = PZOMBIE;
-
   sched();
   panic("zombie exit");
 }
@@ -402,9 +406,9 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  struct thread* curthread = mythread();
+//  struct thread* curthread = mythread();
   struct thread* t;
-  
+
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -416,13 +420,15 @@ wait(void)
       if(p->state == PZOMBIE){
         // Found one.
         pid = p->pid;
-
-        //assume all the thread's states are zombie after exit // 2.1 added
+        //assume all the thread's states are zombie/unused after exit // 2.1 added
         for (t = p->ttable; t < &p->ttable[NTHREAD]; t++) {
-          if(t->state != TZOMBIE){
-            panic("zombie proc with non zombie thread");
+          if(t->state != TZOMBIE && t->state != TUNUSED){
+            panic("zombie proc with non zombie/Unused thread");
           }
-          freethread(t);
+            if(t->state != TUNUSED){
+                freethread(t);
+            }
+
         }
 
 //        kfree(p->kstack);
@@ -487,7 +493,7 @@ scheduler(void)
 
         c->thread = t;
         c->proc = p;
-        switchuvm(p);
+        switchuvm(p,t);
         //p->state = RUNNING;
         t->state = TRUNNING;
 
@@ -523,8 +529,10 @@ sched(void)
     panic("sched ptable.lock");
   if(mycpu()->ncli != 1)
     panic("sched locks");
-  if(t->state == TRUNNING)
+  if(t->state == TRUNNING) {
+    cprintf("sched in proc.c running\n");
     panic("sched running");
+  }
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
@@ -648,7 +656,7 @@ int
 kill(int pid)
 {
   struct proc *p;
-  struct thread* t;
+//  struct thread* t;
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
@@ -682,10 +690,10 @@ procdump(void)
   //[RUNNING]   "run   ",
   [PZOMBIE]    "proc_zombie"
   };
-  int i;
+//  int i;
   struct proc *p;
   char *state;
-  uint pc[10];
+//  uint pc[10];
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == PUNUSED)
@@ -695,7 +703,7 @@ procdump(void)
     else
       state = "???";
     cprintf("%d %s %s", p->pid, state, p->name);
-//    if(p->state == SLEEPING){ TODO check if needed
+//    if(p->state == SLEEPING){
 //      getcallerpcs((uint*)p->context->ebp+2, pc);
 //      for(i=0; i<10 && pc[i] != 0; i++)
 //        cprintf(" %p", pc[i]);

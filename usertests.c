@@ -772,7 +772,7 @@ concreate(void)
     char name[14];
   } de;
 
-  printf(1, "concreate test\n");
+//  printf(1, "concreate test\n");
   file[0] = 'C';
   file[2] = '\0';
   for(i = 0; i < 40; i++){
@@ -797,11 +797,12 @@ concreate(void)
       close(fd);
     }
     if(pid == 0){
-      printf(1, "concreate test child pid: %d enter exit\n", pid);
+     printf(1, "c\n");
       exit();
-      printf(1, "concreate test return from exit\n");
+      printf(1, "return from exit\n");
     }
     else {
+      printf(1, "P\n");
       wait();
     }
   }

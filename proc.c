@@ -302,6 +302,9 @@ fork(void)
 
 //  np->state = RUNNABLE;
     np->state = PUSING;
+  if(nt->state == TZOMBIE){
+    panic("fork\n");
+  }
     nt->state = TRUNNABLE;
 
   release(&ptable.lock);
@@ -324,79 +327,170 @@ freethread(struct thread* t){
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
-void
-exit(void)
-{
-  struct proc *curproc = myproc();
-  struct thread* curthread = mythread();
-  struct thread* t;
-  struct proc *p;
-  int fd;
-
-  if(curproc == initproc)
-    panic("init exiting");
-
-//  cprintf("state %d\n",curthread->state);
-
-
+//void
+//exit(void)
+//{
+//  struct proc *curproc = myproc();
+//  struct thread* curthread = mythread();
+//  struct thread* t;
+//  struct proc *p;
+//  int fd;
+//
+//  if(curproc == initproc)
+//    panic("init exiting");
+//
+//
+//  curproc->killed = 1; // 2.1 added
+//
+//  acquire(&ptable.lock);
+//
+//
+//
+//
+//  curthread->state = TZOMBIE; //2.1
+//
+//    // check if curthread is last thread to exit 2.1
+//  for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+//    if ((t != curthread ) && ( (t->state != TZOMBIE ) && (t->state != TUNUSED) )){
+//        //cprintf("exit sched 1 thread state:%d\n",curthread->state);
+//      sched();
+//      panic("zombie exit");
+//    }
+//  }
+//    if(curthread->state != TZOMBIE){
+//        panic("1\n");
+//    }
+//
+//  release(&ptable.lock);
+//
+//  // Clean proc
+//  // Close all open files.
+//  for(fd = 0; fd < NOFILE; fd++){
+//    if(curproc->ofile[fd]){
+//      fileclose(curproc->ofile[fd]);
+//      curproc->ofile[fd] = 0;
+//    }
+//  }
+//
 //  begin_op();
 //  iput(curproc->cwd);
 //  end_op();
 //  curproc->cwd = 0;
+//
+//    if(curthread->state != TZOMBIE){
+//        panic("3\n");
+//    }
+//
+//  acquire(&ptable.lock);
+//
+//    // Parent might be sleeping in wait().
+//    wakeup1(curproc->parent);
+//
+//    // Pass abandoned children to init.
+//    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+//        if(p->parent == curproc){
+//            p->parent = initproc;
+//            if(p->state == PZOMBIE)
+//                wakeup1(initproc);
+//        }
+//    }
+//
+//  // Jump into the scheduler, never to return.
+//  curproc->state = PZOMBIE;
+//  //cprintf("exit sched 2 thread state:%d\n",curthread->state);
+//  sched();
+//  panic("zombie exit");
+//}
 
 
-  acquire(&ptable.lock);
+void
+proc_exit(void){
+    struct proc *curproc = myproc();
+    struct proc *p;
+    int fd;
+//    acquire(&ptable.lock);
+//    int cpu_id = mycpu()->apicid;
+//    release(&ptable.lock);
+    if(curproc == initproc)
+        panic("init exiting");
 
-  // Parent might be sleeping in wait().
-  wakeup1(curproc->parent);
 
-  // Pass abandoned children to init.
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == curproc){
-      p->parent = initproc;
-      if(p->state == PZOMBIE)
-        wakeup1(initproc);
+    // Clean proc
+    // Close all open files.
+    for(fd = 0; fd < NOFILE; fd++){
+        if(curproc->ofile[fd]){
+            fileclose(curproc->ofile[fd]);
+            curproc->ofile[fd] = 0;
+        }
     }
-  }
+
+//    cprintf("state: %d cpu id: %d\n",mythread()->state, cpu_id);
+    begin_op();
+    iput(curproc->cwd);
+    end_op();
+    curproc->cwd = 0;
+//    cprintf("state: %d cpu id: %d\n",mythread()->state,cpu_id);
 
 
-    // clean thread memory 2.1
-  //  freethread(curthread);
-  curthread->state = TZOMBIE;
+    acquire(&ptable.lock);
 
+    // Parent might be sleeping in wait().
+    wakeup1(curproc->parent);
 
-    // check if last thread to exit 2.1
-  for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
-    if ((t != curthread ) && ( (t->state != TZOMBIE ) && (t->state != TUNUSED) )){
-      sched();
-      panic("zombie exit");
+    // Pass abandoned children to init.
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->parent == curproc){
+            p->parent = initproc;
+            if(p->state == PZOMBIE)
+                wakeup1(initproc);
+        }
     }
-  }
-
-  release(&ptable.lock);
-
-  // Clean proc
-  // Close all open files.
-  for(fd = 0; fd < NOFILE; fd++){
-    if(curproc->ofile[fd]){
-      fileclose(curproc->ofile[fd]);
-      curproc->ofile[fd] = 0;
-    }
-  }
-
-  begin_op();
-  iput(curproc->cwd);
-  end_op();
-  curproc->cwd = 0;
-  curproc->killed = 1; // 2.1 added
-
-
-  acquire(&ptable.lock);
-  // Jump into the scheduler, never to return.
-  curproc->state = PZOMBIE;
-  sched();
-  panic("zombie exit");
+//    cprintf("proc exit:\n");
+//    cprintf("cpu id %d\n" , mycpu()->apicid);
+//    cprintf("proc id %d\n" , curproc->pid);
+//    cprintf("thread id %d\n" , mythread()->tid);
+    // Jump into the scheduler, never to return.
+    curproc->state = PZOMBIE;
+    mythread()->state = TZOMBIE;
+    sched();
+    panic("zombie exit");
 }
+
+void
+kthread_exit(void){
+    struct proc *curproc = myproc();
+    struct thread* curthread = mythread();
+    struct thread* t;
+
+    acquire(&ptable.lock);
+
+    curthread->state = TZOMBIE; //2.1
+//    cprintf("thread exit:\n");
+//    cprintf("cpu id %d\n" , mycpu()->apicid);
+//    cprintf("proc id %d\n" , curproc->pid);
+//    cprintf("thread id %d\n" , curthread->tid);
+
+    // check if cur thread is last thread to exit 2.1
+    for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+        if ((t != curthread ) && ( (t->state != TZOMBIE ) && (t->state != TUNUSED) )){
+            sched();
+            panic("zombie exit");
+        }
+    }
+    release(&ptable.lock);
+   // 2.1 all threads finished exit
+   proc_exit();
+}
+
+void
+exit(void)
+{
+    struct proc *curproc = myproc();
+    curproc->killed = 1; // 2.1 added
+    kthread_exit();
+    panic("zombie exit");
+}
+
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
@@ -417,6 +511,7 @@ wait(void)
       if(p->parent != curproc)
         continue;
       havekids = 1;
+        cprintf("p state is: %d\n",p->state);
       if(p->state == PZOMBIE){
         // Found one.
         pid = p->pid;
@@ -425,12 +520,11 @@ wait(void)
           if(t->state != TZOMBIE && t->state != TUNUSED){
             panic("zombie proc with non zombie/Unused thread");
           }
-            if(t->state != TUNUSED){
+            if(t->state == TZOMBIE){
                 freethread(t);
             }
 
         }
-
 //        kfree(p->kstack);
 //        p->kstack = 0;
         freevm(p->pgdir);
@@ -451,6 +545,7 @@ wait(void)
     }
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+       cprintf("sleep proc name %s:\n",curproc->name);
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
 
   }
@@ -530,7 +625,6 @@ sched(void)
   if(mycpu()->ncli != 1)
     panic("sched locks");
   if(t->state == TRUNNING) {
-    cprintf("sched in proc.c running\n");
     panic("sched running");
   }
   if(readeflags()&FL_IF)
@@ -546,6 +640,9 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
 //  myproc()->state = RUNNABLE;
+  if(mythread()->state == TZOMBIE){
+    panic("yield");
+  }
   mythread()->state = TRUNNABLE;
   sched();
   release(&ptable.lock);
@@ -632,8 +729,10 @@ wakeup1(void *chan)
     //if (p->state == SLEEPING && p->chan == chan)
     if (p->state == PUSING){
       for (t = p->ttable; t < &p->ttable[NTHREAD]; t++) {
-        if (t->state == TSLEEPING && t->chan == chan)
+        if (t->state == TSLEEPING && t->chan == chan){
           t->state = TRUNNABLE;
+        }
+
       }
     }
 //      p->state = RUNNABLE;

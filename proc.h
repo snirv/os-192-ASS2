@@ -36,7 +36,7 @@ struct context {
   uint eip;
 };
 
-enum threadstate { TUNUSED, TEMBRYO ,TSLEEPING, TRUNNABLE, TRUNNING ,TZOMBIE};
+enum threadstate { TUNUSED, TEMBRYO ,TSLEEPING, TRUNNABLE ,TRUNNING,TZOMBIE};
 
 // Per-process state
 struct thread {

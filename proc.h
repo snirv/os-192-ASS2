@@ -52,7 +52,7 @@ struct thread {
     int killed;                  // If non-zero, have been killed
 //    struct file *ofile[NOFILE];  // Open files
 //    struct inode *cwd;           // Current directory
-    char name[16];               // Thread name (debugging)
+   // char name[16];               // Thread name (debugging)
 };
 
 

@@ -320,8 +320,7 @@ freethread(struct thread* t){
   t->kstack = 0;
   t->state= TUNUSED;
   t->tid = 0;
-  t->parent = 0;
-  t->name[0] = 0;
+    //t->parent = 0;
 
 }
 
@@ -466,6 +465,8 @@ kthread_exit(void){
     acquire(&ptable.lock);
 
     curthread->state = TZOMBIE; //2.1
+
+    wakeup1(curthread);//2.2 added for join
 //    cprintf("thread exit:\n");
 //    cprintf("cpu id %d\n" , mycpu()->apicid);
 //    cprintf("proc id %d\n" , curproc->pid);
@@ -478,10 +479,18 @@ kthread_exit(void){
             panic("zombie exit");
         }
     }
+
     release(&ptable.lock);
    // 2.1 all threads finished exit
    proc_exit();
 }
+
+
+
+
+
+
+
 
 void
 exit(void)
@@ -503,7 +512,6 @@ wait(void)
   struct proc *curproc = myproc();
 //  struct thread* curthread = mythread();
   struct thread* t;
-    struct proc *p2;
 
 
   acquire(&ptable.lock);
@@ -814,3 +822,58 @@ procdump(void)
   }
 }
 
+int
+kthread_join(int tid) { //added 2.2
+    struct proc *curproc = myproc();
+    struct thread* curthread = mythread();
+    struct thread* t;
+    if(curthread->tid == tid){
+        cprintf("thread run join for itself!!");
+        return -1;
+    }
+
+    acquire(&ptable.lock);
+
+    for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+        if(t == curthread || t->tid != tid){
+            continue;
+        }
+        if (t->state == TUNUSED){
+            release(&ptable.lock);
+            return -1;
+        }
+        if (t->state == TZOMBIE){
+            freethread(t); //TODO what we should do if 2 threads are joining for the same thread
+            release(&ptable.lock);
+            return 0;
+        }
+        else {
+            sleep(t, &ptable.lock);
+            return 0;
+        }
+    }
+
+    release(&ptable.lock);
+    return -1;
+
+}
+
+
+int
+kthread_create(void (*start_func)(void), void* stack){
+    struct proc *curproc = myproc();
+    struct thread* t;
+    acquire(&ptable.lock);
+
+    t = alloctread(curproc);
+    if (t== null){
+        return -1;
+    }
+    t->state = TRUNNABLE;
+    t->tf->eip = (uint)start_func;
+    t->tf->esp = (uint)stack;
+
+    return t->tid;
+
+
+}

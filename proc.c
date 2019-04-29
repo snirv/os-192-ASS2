@@ -867,12 +867,13 @@ kthread_create(void (*start_func)(void), void* stack){
 
     t = alloctread(curproc);
     if (t== null){
+        release(&ptable.lock);
         return -1;
     }
     t->state = TRUNNABLE;
     t->tf->eip = (uint)start_func;
     t->tf->esp = (uint)stack;
-
+    release(&ptable.lock);
     return t->tid;
 
 

@@ -503,6 +503,8 @@ wait(void)
   struct proc *curproc = myproc();
 //  struct thread* curthread = mythread();
   struct thread* t;
+    struct proc *p2;
+
 
   acquire(&ptable.lock);
   for(;;){
@@ -512,7 +514,7 @@ wait(void)
       if(p->parent != curproc)
         continue;
       havekids = 1;
-        cprintf("p state is: %d\n",p->state);
+//        cprintf("p state is: %d\n",p->state);
       if(p->state == PZOMBIE){
         // Found one.
         pid = p->pid;
@@ -546,7 +548,7 @@ wait(void)
     }
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
-       cprintf("sleep proc name %s:\n",curproc->name);
+//       cprintf("sleep proc name %s:\n",curproc->name);
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
 
   }

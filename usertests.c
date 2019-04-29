@@ -776,7 +776,7 @@ concreate(void)
   file[0] = 'C';
   file[2] = '\0';
   for(i = 0; i < 40; i++){
-    printf(1, "concreate test loop num: %d\n", i);
+//    printf(1, "concreate test loop num: %d\n", i);
 
     file[1] = '0' + i;
     unlink(file);
@@ -791,18 +791,18 @@ concreate(void)
     } else {
       fd = open(file, O_CREATE | O_RDWR);
       if(fd < 0){
-        printf(1, "concreate create %s failed\n", file);
+//        printf(1, "concreate create %s failed\n", file);
         exit();
       }
       close(fd);
     }
     if(pid == 0){
-     printf(1, "c\n");
+//     printf(1, "c\n");
       exit();
-      printf(1, "return from exit\n");
+//      printf(1, "return from exit\n");
     }
     else {
-      printf(1, "P\n");
+//      printf(1, "P\n");
       wait();
     }
   }
@@ -1767,9 +1767,9 @@ main(int argc, char *argv[])
   }
   close(open("usertests.ran", O_CREATE));
 
- // argptest();
-  //createdelete();
-  //linkunlink();
+  argptest();
+  createdelete();
+  linkunlink();
   concreate();
   fourfiles();
   sharedfd();

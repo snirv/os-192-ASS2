@@ -99,7 +99,7 @@ sys_uptime(void)
 
 int
 sys_kthread_exit (void){ //2.2 added
-     kthread_exit();
+//     kthread_exit();
      return 0;
 }
 
@@ -110,21 +110,23 @@ sys_kthread_join(void)
 
     if(argint(0, &tid) < 0)
         return -1;
-    return kthread_join(tid);
+    //return kthread_join(tid);
+    return 0;
 }
 
 int
 sys_kthread_create(void) { //TODO hope this one is working
 
-    void (*)(void) start_func;
+    void (*start_func)(void);
     void *stack;
 
-    if (argptr(0, (void (*)(void)) &start_func, sizeof(*start_func)) < 0) {
+    if (argptr(0, (void*)&start_func, sizeof(start_func)) < 0) {
         return -1;
     }
 
-    if (argptr(1, (void *) &stack, sizeof(*stack)) < 0){
+    if (argptr(1, (void *) &stack, sizeof(stack)) < 0){
         return -1;
     }
-    return kthread_create(start_func, stack);
+    //return kthread_create(start_func, stack);
+    return 0;
 }

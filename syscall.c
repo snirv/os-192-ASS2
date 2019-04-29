@@ -104,9 +104,9 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_kthread_id(void); //2.2 added
-extern int sys_kthread_exit(void) //2.2 added
-extern int sys_kthread_join(void) //2.2 added
-extern int sys_kthread_create(void) //2.2 added
+extern int sys_kthread_exit(void); //2.2 added
+extern int sys_kthread_join(void); //2.2 added
+extern int sys_kthread_create(void); //2.2 added
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,

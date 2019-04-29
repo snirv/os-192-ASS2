@@ -4,6 +4,7 @@ struct rtcdate;
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
+void kthread_exit(void); //2.2 added
 int wait(void);
 int pipe(int*);
 int write(int, const void*, int);
@@ -20,9 +21,12 @@ int mkdir(const char*);
 int chdir(const char*);
 int dup(int);
 int getpid(void);
+int kthread_id(void); //2.2 added
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int kthread_join(int); //2.2 added
+int kthread_create(void (*start_func)(void), void* stack); // 2.2 added
 
 // ulib.c
 int stat(const char*, struct stat*);

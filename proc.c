@@ -6,6 +6,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "kthread.h"
+
 
 struct {
   struct spinlock lock;
@@ -20,6 +22,10 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+static struct kthread_mutex_t mutex_arr[MAX_MUTEXES]; //3.1
+
+struct spinlock mutex_arr_lock;
 
 void
 pinit(void)
@@ -458,10 +464,11 @@ proc_exit(void){
 
 void
 kthread_exit(void){
+
     struct proc *curproc = myproc();
     struct thread* curthread = mythread();
     struct thread* t;
-
+//    cprintf("thread id %d killed %d\n",curthread->tid , curthread->killed);
     acquire(&ptable.lock);
 
     curthread->state = TZOMBIE; //2.1
@@ -594,9 +601,10 @@ scheduler(void)
 
       for (t = p->ttable; t < &p->ttable[NTHREAD]; t++) {
         if (t->state != TRUNNABLE){
+//            if(t->tid ==4 )cprintf("name: %s , state %d thread id:%d\n",p->name,t->state,t->tid);
           continue;
         }
-
+//        cprintf("name: %s , state %d thread id:%d\n",p->name,p->state,t->tid);
         c->thread = t;
         c->proc = p;
         switchuvm(p,t);
@@ -861,16 +869,23 @@ kthread_join(int tid) { //added 2.2
 
 int
 kthread_create(void (*start_func)(void), void* stack){
+//    cprintf("start func!!!!!!!!!!!!!!!!!!111 %x \n", start_func);
+//    cprintf("stack !!!!!!!!!!!!!!!!!!!!!!1 %x \n", stack);
     struct proc *curproc = myproc();
     struct thread* t;
     acquire(&ptable.lock);
 
     t = alloctread(curproc);
-    if (t== null){
+//    cprintf("proc name %s \n", curproc->name);
+//    cprintf("thread id %d \n", t->tid);
+
+
+    if (t == null){
         release(&ptable.lock);
         return -1;
     }
     t->state = TRUNNABLE;
+    *t->tf = *mythread()->tf;
     t->tf->eip = (uint)start_func;
     t->tf->esp = (uint)stack;
     release(&ptable.lock);
@@ -878,3 +893,110 @@ kthread_create(void (*start_func)(void), void* stack){
 
 
 }
+
+
+int
+kthread_mutex_alloc(){
+    acquire(&mutex_arr_lock);
+    struct kthread_mutex_t* m ;
+    int idx = 0;
+    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        if (m->state == M_AVAILABLE){
+            m->state = M_BUSY;
+            m->mid = idx;
+            release(&mutex_arr_lock);
+            return m->mid;
+        }
+        idx++;
+    }
+    release(&mutex_arr_lock);
+    return -1;
+}
+
+
+
+int
+kthread_mutex_dealloc(int mutex_id){
+
+    struct kthread_mutex_t* m ;
+    int idx = 0;
+    acquire(&mutex_arr_lock);
+    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        if (idx == mutex_id){
+            if (m->state == M_AVAILABLE){
+                release(&mutex_arr_lock);
+                return 0;
+            }
+            else if (m->state == M_BUSY){
+                acquire(&m->lk);
+                if(!m->locked){
+                    m->state=M_AVAILABLE;
+                    release(&m->lk);
+                    release(&mutex_arr_lock);
+                    return 0;
+
+                }
+                else{
+                    release(&m->lk);
+                    release(&mutex_arr_lock);
+                    return -1;
+                }
+            }
+        }
+    idx++;
+    }
+    release(&mutex_arr_lock);
+    return -1;
+}
+
+
+
+int kthread_mutex_lock(int mutex_id){ //TODO
+//    struct kthread_mutex_t* m ;
+//    int idx = 0;
+//    acquire(&mutex_arr_lock);
+//    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+//        if (idx == mutex_id) {
+//            acquire(&m->lk);
+//            m->m_thread_idx++;
+//            while (m->locked) {
+//                sleep(m->mutex_thread[m->m_thread_idx], &m->lk);
+//            }
+//            m->locked = 1;
+//        }
+//        idx++;
+//    }
+//    release(&mutex_arr_lock);
+    return -1;
+}
+
+
+
+
+int kthread_mutex_unlock(int mutex_id){ //TODO
+    return 0;
+}
+
+
+
+//void
+//acquiresleep(struct sleeplock *lk)
+//{
+//    acquire(&lk->lk);
+//    while (lk->locked) {
+//        sleep(lk, &lk->lk);
+//    }
+//    lk->locked = 1;
+//    lk->pid = myproc()->pid;
+//    release(&lk->lk);
+//}
+//
+//void
+//releasesleep(struct sleeplock *lk)
+//{
+//    acquire(&lk->lk);
+//    lk->locked = 0;
+//    lk->pid = 0;
+//    wakeup(lk);
+//    release(&lk->lk);
+//}

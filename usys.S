@@ -33,3 +33,8 @@ SYSCALL(kthread_id) //2.2 added
 SYSCALL(kthread_exit)  //2.2 added
 SYSCALL(kthread_join) //2.2 added
 SYSCALL(kthread_create) //2.2 added
+SYSCALL(kthread_mutex_alloc) //3.1 added
+SYSCALL(kthread_mutex_dealloc) //3.1 added
+SYSCALL(kthread_mutex_lock) //3.1 added
+SYSCALL(kthread_mutex_unlock) //3.1 added
+

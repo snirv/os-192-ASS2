@@ -24,3 +24,8 @@
 #define SYS_kthread_exit 23  //2.2 added
 #define SYS_kthread_join 24 //2.2 added
 #define SYS_kthread_create 25 //2.2 added
+#define SYS_kthread_mutex_alloc 26 //3.1 added
+#define SYS_kthread_mutex_dealloc 27 //3.1 added
+#define SYS_kthread_mutex_lock 28 //3.1 added
+#define SYS_kthread_mutex_unlock 29 //3.1 added
+

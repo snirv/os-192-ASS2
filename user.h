@@ -27,6 +27,11 @@ int sleep(int);
 int uptime(void);
 int kthread_join(int); //2.2 added
 int kthread_create(void (*start_func)(void), void* stack); // 2.2 added
+int kthread_mutex_alloc(void);
+int kthread_mutex_dealloc(int);
+int kthread_mutex_lock(int);
+int kthread_mutex_unlock(int);
+
 
 // ulib.c
 int stat(const char*, struct stat*);

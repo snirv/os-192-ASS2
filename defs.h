@@ -9,6 +9,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct kthread_mutex_t;
 
 // bio.c
 void            binit(void);
@@ -123,7 +124,15 @@ void            yield(void);
 struct thread*  mythread(void); //2.1 added
 void            kthread_exit(void); //2.2 added
 int             kthread_join(int); //2.2 added
-int kthread_create(void (*)(void), void*); // 2.2 added
+int             kthread_create(void (*start_func)(void), void* stack);
+int             kthread_mutex_alloc(void);
+int             kthread_mutex_dealloc(int);
+int             kthread_mutex_lock(int);
+int             kthread_mutex_unlock(int);
+
+
+
+
 
 // swtch.S
 void            swtch(struct context**, struct context*);

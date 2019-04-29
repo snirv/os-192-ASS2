@@ -107,6 +107,13 @@ extern int sys_kthread_id(void); //2.2 added
 extern int sys_kthread_exit(void); //2.2 added
 extern int sys_kthread_join(void); //2.2 added
 extern int sys_kthread_create(void); //2.2 added
+extern int sys_kthread_mutex_alloc(void); //3.1 added
+extern int sys_kthread_mutex_dealloc(void); //3.1 added
+extern int sys_kthread_mutex_lock(void); //3.1 added
+extern int sys_kthread_mutex_unlock(void); //3.1 added
+
+
+
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -134,6 +141,10 @@ static int (*syscalls[])(void) = {
 [SYS_kthread_exit] sys_kthread_exit,  //2.2 added
 [SYS_kthread_join] sys_kthread_join, //2.2 added
 [SYS_kthread_create] sys_kthread_create, //2.2 added
+[SYS_kthread_mutex_alloc] sys_kthread_mutex_alloc, //3.1 added
+[SYS_kthread_mutex_dealloc] sys_kthread_mutex_dealloc, //3.1 added
+[SYS_kthread_mutex_lock] sys_kthread_mutex_lock, //3.1 added
+[SYS_kthread_mutex_unlock] sys_kthread_mutex_unlock, //3.1 added
 };
 
 void

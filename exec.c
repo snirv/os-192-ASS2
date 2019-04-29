@@ -20,11 +20,13 @@ exec(char *path, char **argv)
   struct proc *curproc = myproc();
   struct thread* curthread = mythread();
   struct thread* t;
+//    cprintf("enter exce\n");
 
+//    cprintf("path: %s\n", path);
 
     // TODO need to tell all threads in the currproc to terminate after exiting from user mode
     for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
-        if (t != curthread) {
+        if (t != curthread && (t->state == TRUNNING || t->state == TRUNNABLE)) {
             t->killed = 1;
         }
     }

@@ -8,6 +8,26 @@
 #include "spinlock.h"
 #include "kthread.h"
 
+#include "mutex.h"
+
+
+//enum mutexstate { M_AVAILABLE , M_BUSY }; ///3.1 mutex
+//
+//// Long-term locks for processes
+//struct kthread_mutex_t {
+//    uint locked;       // Is the lock held?
+//    struct spinlock lk; // spinlock protecting this sleep lock
+//    enum mutexstate state;
+//    int mid; //mutex_id
+//    struct thread* mutex_thread[NTHREAD];
+//    int locked_thread_id;
+//    // For debugging:
+//    int tid;           // thread holding lock
+//};
+//
+
+
+
 
 struct {
   struct spinlock lock;
@@ -25,7 +45,7 @@ static void wakeup1(void *chan);
 
 static struct kthread_mutex_t mutex_arr[MAX_MUTEXES]; //3.1
 
-struct spinlock mutex_arr_lock;
+//struct spinlock mutex_arr_lock;
 
 void
 pinit(void)
@@ -240,7 +260,7 @@ userinit(void)
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
-int
+int  //todo need to protect
 growproc(int n)
 {
   uint sz;
@@ -897,19 +917,22 @@ kthread_create(void (*start_func)(void), void* stack){
 
 int
 kthread_mutex_alloc(){
-    acquire(&mutex_arr_lock);
+//    acquire(&mutex_arr_lock);
     struct kthread_mutex_t* m ;
     int idx = 0;
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        acquire(&m->lk);
         if (m->state == M_AVAILABLE){
             m->state = M_BUSY;
             m->mid = idx;
-            release(&mutex_arr_lock);
+            release(&m->lk);
+//            release(&mutex_arr_lock);
             return m->mid;
         }
         idx++;
+        release(&m->lk);
     }
-    release(&mutex_arr_lock);
+//    release(&mutex_arr_lock);
     return -1;
 }
 
@@ -919,53 +942,60 @@ int
 kthread_mutex_dealloc(int mutex_id){
 
     struct kthread_mutex_t* m ;
-    int idx = 0;
-    acquire(&mutex_arr_lock);
+
+//    acquire(&mutex_arr_lock);
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
-        if (idx == mutex_id){
+        if (m->mid == mutex_id){
+            acquire(&m->lk);
             if (m->state == M_AVAILABLE){
-                release(&mutex_arr_lock);
+                release(&m->lk);
+//                release(&mutex_arr_lock);
                 return 0;
             }
             else if (m->state == M_BUSY){
-                acquire(&m->lk);
+//                acquire(&m->lk);
                 if(!m->locked){
-                    m->state=M_AVAILABLE;
+                    m->state = M_AVAILABLE;
                     release(&m->lk);
-                    release(&mutex_arr_lock);
+//                    release(&mutex_arr_lock);
                     return 0;
 
                 }
                 else{
                     release(&m->lk);
-                    release(&mutex_arr_lock);
+//                    release(&mutex_arr_lock);
                     return -1;
                 }
             }
+            release(&m->lk);
         }
-    idx++;
     }
-    release(&mutex_arr_lock);
+//    release(&mutex_arr_lock);
     return -1;
 }
 
 
 
 int kthread_mutex_lock(int mutex_id){ //TODO
-//    struct kthread_mutex_t* m ;
-//    int idx = 0;
+    struct kthread_mutex_t* m ;
 //    acquire(&mutex_arr_lock);
-//    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
-//        if (idx == mutex_id) {
-//            acquire(&m->lk);
-//            m->m_thread_idx++;
-//            while (m->locked) {
-//                sleep(m->mutex_thread[m->m_thread_idx], &m->lk);
-//            }
-//            m->locked = 1;
-//        }
-//        idx++;
-//    }
+    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        acquire(&m->lk);
+        if (m->mid == mutex_id && m->state ==  M_BUSY ) {
+//            release(&mutex_arr_lock);
+            while (m->locked) {
+                sleep(m, &m->lk);
+            }
+            if(m->state == M_BUSY) {// check that didnt dealloc while sleeping
+                m->locked = 1;
+                m->tid = mythread()->tid;
+                release(&m->lk);
+                return 0;
+            }
+        }
+        release(&m->lk);
+
+    }
 //    release(&mutex_arr_lock);
     return -1;
 }
@@ -974,7 +1004,21 @@ int kthread_mutex_lock(int mutex_id){ //TODO
 
 
 int kthread_mutex_unlock(int mutex_id){ //TODO
-    return 0;
+    struct kthread_mutex_t* m ;
+//     acquire(&mutex_arr_lock);
+    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        acquire(&m->lk);
+        if (m->mid == mutex_id && m->state ==  M_BUSY ) {
+            m->locked = 0;
+            m->tid = 0;
+            wakeup(m);
+            release(&m->lk);
+            return 0;
+        }
+        release(&m->lk);
+    }
+//    release(&mutex_arr_lock);
+    return -1;
 }
 
 

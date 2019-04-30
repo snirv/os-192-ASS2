@@ -2,7 +2,7 @@
 #define NTHREAD 16
 #define MAX_STACK_SIZE 4000
 
-#include "spinlock.h"
+
 
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -83,20 +83,6 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
-
-enum mutexstate { M_AVAILABLE , M_BUSY };
-
-// Long-term locks for processes
-struct kthread_mutex_t {
-    uint locked;       // Is the lock held?
-    struct spinlock lk; // spinlock protecting this sleep lock
-    enum mutexstate state;
-    int mid; //mutex_id
-    struct thread* mutex_thread[NTHREAD];
-    int m_thread_idx;
-    // For debugging:
-    int pid;           // Process holding lock
-};
 
 
 

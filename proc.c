@@ -105,6 +105,16 @@ mythread(void) {
   return t;
 }
 
+void
+freethread(struct thread* t){
+  kfree(t->kstack);
+  t->kstack = 0;
+  t->state= TUNUSED;
+  t->tid = 0;
+    //t->parent = 0;
+
+}
+
 //PAGEBREAK: 32
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
@@ -113,6 +123,7 @@ mythread(void) {
 static struct proc*
 allocproc(void)
 {
+    cprintf("heyyyyyy\n");
   struct proc *p;
 //  char *sp; 2.1
 
@@ -128,7 +139,12 @@ allocproc(void)
 found:
   p->state = PEMBRYO;
   p->pid = nextpid++;
-
+    struct thread* t;
+    for (t = p->ttable; t < &p->ttable[NTHREAD]; t++) {
+        if(t->state != TUNUSED){
+            freethread(t);
+        }
+    }
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -290,7 +306,7 @@ fork(void)
   struct proc *curproc = myproc();
   struct thread *curthread = mythread();
   struct thread *nt;
-
+    //cprintf("fork , proc name %s\n",curproc->name);
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -339,16 +355,6 @@ fork(void)
   return pid;
 }
 
-
-void
-freethread(struct thread* t){
-  kfree(t->kstack);
-  t->kstack = 0;
-  t->state= TUNUSED;
-  t->tid = 0;
-    //t->parent = 0;
-
-}
 
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
@@ -877,6 +883,8 @@ kthread_join(int tid) { //added 2.2
         }
         else {
             sleep(t, &ptable.lock);
+            freethread(t);
+            release(&ptable.lock);
             return 0;
         }
     }
@@ -896,11 +904,13 @@ kthread_create(void (*start_func)(void), void* stack){
     acquire(&ptable.lock);
 
     t = alloctread(curproc);
+
 //    cprintf("proc name %s \n", curproc->name);
 //    cprintf("thread id %d \n", t->tid);
 
 
     if (t == null){
+        cprintf("failllllll, %s\n" ,curproc->name);
         release(&ptable.lock);
         return -1;
     }

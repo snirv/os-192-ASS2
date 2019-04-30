@@ -25,12 +25,22 @@ exec(char *path, char **argv)
 //    cprintf("path: %s\n", path);
 
     // TODO need to tell all threads in the currproc to terminate after exiting from user mode
+    start:
     for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
-        if (t != curthread && (t->state == TRUNNING || t->state == TRUNNABLE)) {
+        if (t != curthread && (t->state == TRUNNING || t->state == TRUNNABLE || t->state == TSLEEPING)) {
+          if(t->state == TSLEEPING){
+            t->state = TRUNNABLE;
+          }
             t->killed = 1;
         }
     }
 
+    for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+        if(t != curthread && (t->state != TZOMBIE && t->state != TUNUSED) ){
+//            cprintf("id %d , state %d, killed %d \n",t->tid,t->state,t->killed);
+            goto start;
+        }
+    }
 
 
   begin_op();

@@ -20,7 +20,7 @@
 
       for(int i = 0; i < tree->mutex_num; i++){
           int mutex_id = kthread_mutex_alloc();
-          if(mutex_id > 0){
+          if(mutex_id >= 0){
               tree->mutex_ids_arr[i] = mutex_id;
           }
           else{
@@ -71,12 +71,12 @@ int trnmnt_tree_release(trnmnt_tree* tree, int id ){
 int release_helper(trnmnt_tree* tree , int tree_idx){
     int father = (tree_idx -1) / 2 ;
     if(father == 0){
-//        kthread_mutex_unlock(tree->mutex_ids_arr[father]);
+        kthread_mutex_unlock(tree->mutex_ids_arr[father]);
         return 0;
     }
     else{
         int ret = release_helper(tree,father);
-        if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[father])== -1 ){
+        if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[tree_idx])== -1 ){
             return -1;
         }
     }

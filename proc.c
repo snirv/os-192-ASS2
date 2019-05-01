@@ -38,6 +38,7 @@ static struct proc *initproc;
 
 int nextpid = 1;
 int nexttid = 1;
+int mutex_idx = 0;
 extern void forkret(void);
 extern void trapret(void);
 
@@ -111,6 +112,10 @@ freethread(struct thread* t){
   t->kstack = 0;
   t->state= TUNUSED;
   t->tid = 0;
+  t->chan = 0;
+  t->context = 0;
+  t->tf = 0;
+  t->killed = 0;
     //t->parent = 0;
 
 }
@@ -123,7 +128,6 @@ freethread(struct thread* t){
 static struct proc*
 allocproc(void)
 {
-    cprintf("heyyyyyy\n");
   struct proc *p;
 //  char *sp; 2.1
 
@@ -463,6 +467,18 @@ proc_exit(void){
     curproc->cwd = 0;
 //    cprintf("state: %d cpu id: %d\n",mythread()->state,cpu_id);
 
+    struct kthread_mutex_t* m ;
+    for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        acquire(&m->lk);
+        if(m->state == M_BUSY && m->alloced_procces_id == myproc()->pid){
+            if(m->locked){
+                panic("locked\n");
+            }
+            m->state = M_AVAILABLE;
+            m->alloced_procces_id = -1;
+        }
+        release(&m->lk);
+    }
 
     acquire(&ptable.lock);
 
@@ -909,8 +925,8 @@ kthread_create(void (*start_func)(void), void* stack){
 //    cprintf("thread id %d \n", t->tid);
 
 
-    if (t == null){
-        cprintf("failllllll, %s\n" ,curproc->name);
+    if (t == null ){
+//        cprintf("failllllll, %s\n" ,curproc->name);
         release(&ptable.lock);
         return -1;
     }
@@ -927,22 +943,21 @@ kthread_create(void (*start_func)(void), void* stack){
 
 int
 kthread_mutex_alloc(){
-//    acquire(&mutex_arr_lock);
     struct kthread_mutex_t* m ;
-    int idx = 0;
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
         acquire(&m->lk);
+//        idx++;
         if (m->state == M_AVAILABLE){
             m->state = M_BUSY;
-            m->mid = idx;
+            m->mid = mutex_idx++;
+            m->alloced_procces_id = myproc()->pid;
+            m->waiting_threads = 0;
             release(&m->lk);
-//            release(&mutex_arr_lock);
             return m->mid;
         }
-        idx++;
+
         release(&m->lk);
     }
-//    release(&mutex_arr_lock);
     return -1;
 }
 
@@ -953,49 +968,37 @@ kthread_mutex_dealloc(int mutex_id){
 
     struct kthread_mutex_t* m ;
 
-//    acquire(&mutex_arr_lock);
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
+        acquire(&m->lk);
         if (m->mid == mutex_id){
-            acquire(&m->lk);
-            if (m->state == M_AVAILABLE){
+            if (m->state == M_AVAILABLE  || m->waiting_threads > 0 || m->locked){
                 release(&m->lk);
-//                release(&mutex_arr_lock);
+                return -1;
+            }
+                m->state = M_AVAILABLE;
+                m->alloced_procces_id = -1;
+                release(&m->lk);
                 return 0;
-            }
-            else if (m->state == M_BUSY){
-//                acquire(&m->lk);
-                if(!m->locked){
-                    m->state = M_AVAILABLE;
-                    release(&m->lk);
-//                    release(&mutex_arr_lock);
-                    return 0;
-
-                }
-                else{
-                    release(&m->lk);
-//                    release(&mutex_arr_lock);
-                    return -1;
-                }
-            }
-            release(&m->lk);
         }
+            release(&m->lk);
     }
-//    release(&mutex_arr_lock);
+
     return -1;
 }
 
 
 
-int kthread_mutex_lock(int mutex_id){ //TODO
+int kthread_mutex_lock(int mutex_id){
     struct kthread_mutex_t* m ;
-//    acquire(&mutex_arr_lock);
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
         acquire(&m->lk);
         if (m->mid == mutex_id && m->state ==  M_BUSY ) {
-//            release(&mutex_arr_lock);
-            while (m->locked) {
-                sleep(m, &m->lk);
-            }
+//            while (m->locked) {
+                if(m->locked){
+                    m->waiting_threads ++;
+                    sleep(m, &m->lk);
+                }
+//            }
             if(m->state == M_BUSY) {// check that didnt dealloc while sleeping
                 m->locked = 1;
                 m->tid = mythread()->tid;
@@ -1006,7 +1009,6 @@ int kthread_mutex_lock(int mutex_id){ //TODO
         release(&m->lk);
 
     }
-//    release(&mutex_arr_lock);
     return -1;
 }
 
@@ -1014,20 +1016,27 @@ int kthread_mutex_lock(int mutex_id){ //TODO
 
 
 int kthread_mutex_unlock(int mutex_id){ //TODO
+    struct proc *curproc = myproc();
+    struct thread* t;
     struct kthread_mutex_t* m ;
-//     acquire(&mutex_arr_lock);
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
         acquire(&m->lk);
-        if (m->mid == mutex_id && m->state ==  M_BUSY ) {
+        if (m->mid == mutex_id && m->state ==  M_BUSY && m->tid == mythread()->tid ) {
             m->locked = 0;
             m->tid = 0;
-            wakeup(m);
+//            wakeup(m);
+            for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+                if(t->state == TSLEEPING && t->chan == m){
+                    t->state = TRUNNABLE;
+                    m->waiting_threads --;
+                    break;
+                }
+            }
             release(&m->lk);
             return 0;
         }
         release(&m->lk);
     }
-//    release(&mutex_arr_lock);
     return -1;
 }
 

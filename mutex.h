@@ -12,8 +12,10 @@ struct kthread_mutex_t {
     enum mutexstate state;
     int mid; //mutex_id
     struct thread* mutex_thread[NTHREAD];
-    int locked_thread_id;
+//    int locked_thread_id;
+    int alloced_procces_id;  //
     // For debugging:
     int tid;           // thread holding lock
+    int waiting_threads;
 };
 

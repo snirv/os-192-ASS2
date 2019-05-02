@@ -77,7 +77,7 @@ int release_helper(trnmnt_tree* tree , int tree_idx){
     }
     else{
         int ret = release_helper(tree,father);
-        if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[tree_idx]) == -1 ){
+        if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[father]) == -1 ){
 
             return -1;
         }

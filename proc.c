@@ -968,6 +968,7 @@ kthread_mutex_dealloc(int mutex_id){
                 release(&m->lk);
                 return -1;
             }
+//                cprintf("waiting %d\n",m->waiting_threads);
                 m->state = M_AVAILABLE;
                 m->alloced_procces_id = -1;
                 release(&m->lk);

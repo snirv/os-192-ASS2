@@ -1,10 +1,17 @@
 
 
+#include "spinlock.h"
+#include "mutex.h"
+
+
 
 typedef struct trnmnt_tree {
     int depth;
     int mutex_num;
     int* mutex_ids_arr;
+    int using_threads;
+    int tree_mutex_id;
+
 } trnmnt_tree;
 
 

@@ -11,7 +11,7 @@ struct kthread_mutex_t {
     struct spinlock lk; // spinlock protecting this sleep lock
     enum mutexstate state;
     int mid; //mutex_id
-    struct thread* mutex_thread[NTHREAD];
+//    struct thread* mutex_thread[NTHREAD];
 //    int locked_thread_id;
     int alloced_procces_id;  //
     // For debugging:

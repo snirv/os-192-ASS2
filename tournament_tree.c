@@ -46,8 +46,11 @@ int trnmnt_tree_dealloc(trnmnt_tree* tree){
 }
 
 int trnmnt_tree_acquire(trnmnt_tree* tree,int id){
-
-   int tree_idx = id + ((1 << tree->depth) -1 );
+    int tree_idx = id + ((1 << tree->depth) -1 );
+    printf(1,"tree_idx %d\n",tree_idx);
+//    if(tree_idx < 0 || tree_idx  >= threshold ){
+//        return -1;
+//    }
     int father = (tree_idx-1) / 2;
     while (father >= 0){
        if( kthread_mutex_lock(tree->mutex_ids_arr[father]) == -1){
@@ -67,6 +70,9 @@ int trnmnt_tree_acquire(trnmnt_tree* tree,int id){
 
 int trnmnt_tree_release(trnmnt_tree* tree, int id ){
     int tree_idx = id + ((1 << tree->depth) -1 );
+//    if(tree_idx < 0 || tree_idx  >= ((1 << (tree->depth +1) ) - 1) ){
+//        return -1;
+//    }
     int res = release_helper(tree,tree_idx);
     if (res == 0){
         tree->using_threads--;
@@ -78,17 +84,17 @@ int trnmnt_tree_release(trnmnt_tree* tree, int id ){
 
 int release_helper(trnmnt_tree* tree , int tree_idx){
     int father = (tree_idx -1) / 2 ;
-//    printf(1,"enter helpr, father is %d\n", father);
     if(father == 0){
-//        printf(1,"unlock %d\n", father);
-        kthread_mutex_unlock(tree->mutex_ids_arr[father]);
+        if (kthread_mutex_unlock(tree->mutex_ids_arr[father]) == -1){
+            printf(1,"unable to unlock %d\n", father);
+            return -1;
+        }
         return 0;
     }
     else{
         int ret = release_helper(tree,father);
-//        printf(1,"unlock %d\n", tree_idx);
         if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[father]) == -1 ){
-
+            printf(1,"unable to unlock %d\n", father);
             return -1;
         }
     }

@@ -1009,25 +1009,30 @@ int kthread_mutex_lock(int mutex_id){
 
 
 
-int kthread_mutex_unlock(int mutex_id){ //TODO
+int kthread_mutex_unlock(int mutex_id){
     struct proc *curproc = myproc();
     struct thread* t;
     struct kthread_mutex_t* m ;
     for (m = mutex_arr; m < &mutex_arr[MAX_MUTEXES]; m++) {
         acquire(&m->lk);
-        if (m->mid == mutex_id && m->state ==  M_BUSY && m->tid == mythread()->tid ) {
-            m->locked = 0;
-            m->tid = 0;
+        if (m->mid == mutex_id ) {
+            if (m->state == M_BUSY && m->tid == mythread()->tid && m->locked) {
+                m->locked = 0;
+                m->tid = 0;
 //            wakeup(m);
-            for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
-                if(t->state == TSLEEPING && t->chan == m){
-                    t->state = TRUNNABLE;
-                    m->waiting_threads --;
-                    break;
+                for (t = curproc->ttable; t < &curproc->ttable[NTHREAD]; t++) {
+                    if (t->state == TSLEEPING && t->chan == m) {
+                        t->state = TRUNNABLE;
+                        m->waiting_threads--;
+                        break;
+                    }
                 }
+                release(&m->lk);
+                return 0;
             }
+            cprintf("m->state %d m->tid %d  mythread()->tid %d  m->locked %d \n",m->state,m->tid,mythread()->tid,m->locked);
             release(&m->lk);
-            return 0;
+            return -1;
         }
         release(&m->lk);
     }

@@ -913,20 +913,13 @@ kthread_join(int tid) { //added 2.2
 
 int
 kthread_create(void (*start_func)(void), void* stack){
-//    cprintf("start func!!!!!!!!!!!!!!!!!!111 %x \n", start_func);
-//    cprintf("stack !!!!!!!!!!!!!!!!!!!!!!1 %x \n", stack);
     struct proc *curproc = myproc();
     struct thread* t;
     acquire(&ptable.lock);
 
     t = alloctread(curproc);
 
-//    cprintf("proc name %s \n", curproc->name);
-//    cprintf("thread id %d \n", t->tid);
-
-
     if (t == null ){
-//        cprintf("failllllll, %s\n" ,curproc->name);
         release(&ptable.lock);
         return -1;
     }

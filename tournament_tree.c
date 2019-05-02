@@ -70,13 +70,15 @@ int trnmnt_tree_release(trnmnt_tree* tree, int id ){
 
 int release_helper(trnmnt_tree* tree , int tree_idx){
     int father = (tree_idx -1) / 2 ;
+    printf(1,"enter helpr, father is %d\n", father);
     if(father == 0){
         kthread_mutex_unlock(tree->mutex_ids_arr[father]);
         return 0;
     }
     else{
         int ret = release_helper(tree,father);
-        if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[tree_idx])== -1 ){
+        if (ret == -1 || kthread_mutex_unlock(tree->mutex_ids_arr[tree_idx]) == -1 ){
+
             return -1;
         }
     }
